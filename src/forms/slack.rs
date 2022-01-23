@@ -59,7 +59,12 @@ pub struct SlackFormLP {
 }
 
 impl SlackFormLP {
-    pub fn new(A: Vec<Vec<f32>>, b: Vec<f32>, c: Vec<f32>, v: f32) -> Result<SlackFormLP, String> {
+    pub fn new(
+        A: Vec<Vec<f32>>,
+        b: Vec<f32>,
+        c: Vec<f32>,
+        v: f32,
+    ) -> Result<SlackFormLP, String> {
         // The first instance must comply to these following constraints:
         if b.is_empty() {
             return Err("Vector 'b' should not be empty".into());
@@ -69,56 +74,63 @@ impl SlackFormLP {
         }
         if c.len() != A[0].len() {
             return Err(format!(
-                "Matrix 'A' columns count does not match with vector 'c' size ({} != {})",
-                A[0].len(), c.len(),
+                "Matrix 'A' columns count does not match with vector 'c' size \
+                 ({} != {})",
+                A[0].len(),
+                c.len(),
             ));
         }
         for line in A.iter() {
             if line.len() != c.len() {
-                return Err("Each and every row in the matrix 'A' should have the same size".into());
+                return Err("Each and every row in the matrix 'A' should \
+                            have the same size"
+                    .into());
             }
         }
         if A.len() != b.len() {
             return Err(format!(
-                "Matrix 'a' rows count does not match with vector 'b' size ({} != {})",
-                A.len(), b.len(),
+                "Matrix 'a' rows count does not match with vector 'b' size \
+                 ({} != {})",
+                A.len(),
+                b.len(),
             ));
         }
 
-        let N = (c.len()..c.len() + b.len()).into_iter().collect::<Vec<usize>>();
+        let N =
+            (c.len()..c.len() + b.len()).into_iter().collect::<Vec<usize>>();
         let B = (0..c.len()).into_iter().collect::<Vec<usize>>();
 
         let x = vec![0.0; c.len()];
 
-        Ok(SlackFormLP {
-            N,
-            B,
-            A,
-            b,
-            c,
-            v,
-            x,
-        })
+        Ok(SlackFormLP { N, B, A, b, c, v, x })
     }
 }
 
 impl fmt::Display for SlackFormLP {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         println!("Maximize: ");
-        let str = self.c.iter().enumerate()
+        let str = self
+            .c
+            .iter()
+            .enumerate()
             .map(|(j, c)| format!("{:.2} . x_{}", c, j))
             .collect::<Vec<String>>()
             .join(" + ");
         println!("\t{}", str);
         println!("Subject to:");
         for (i, line) in self.a.iter().enumerate() {
-            let str = line.iter().enumerate()
+            let str = line
+                .iter()
+                .enumerate()
                 .map(|(j, a)| format!("{:.2} . x_{}", a, j))
                 .collect::<Vec<String>>()
                 .join(" + ");
             println!("\t{} <= {:.2}", str, self.b[i]);
         }
-        let str = self.x.iter().enumerate()
+        let str = self
+            .x
+            .iter()
+            .enumerate()
             .map(|(j, _)| format!("x_{} >= 0.0", j))
             .collect::<Vec<String>>()
             .join(", ");

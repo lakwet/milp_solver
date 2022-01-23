@@ -28,7 +28,11 @@ pub struct StandardFormLP {
 }
 
 impl StandardFormLP {
-    pub fn new(c: Vec<f32>, a: Vec<Vec<f32>>, b: Vec<f32>) -> Result<StandardFormLP, String> {
+    pub fn new(
+        c: Vec<f32>,
+        a: Vec<Vec<f32>>,
+        b: Vec<f32>,
+    ) -> Result<StandardFormLP, String> {
         if a.is_empty() {
             return Err("Matrix 'a' should not be empty".into());
         }
@@ -40,50 +44,59 @@ impl StandardFormLP {
         }
         if c.len() != a[0].len() {
             return Err(format!(
-                "Matrix 'a' columns count does not match with vector 'c' size ({} != {})",
-                a[0].len(), c.len(),
+                "Matrix 'a' columns count does not match with vector 'c' size \
+                 ({} != {})",
+                a[0].len(),
+                c.len(),
             ));
         }
         for line in a.iter() {
             if line.len() != c.len() {
-                return Err("Each and every row in the matrix 'a' should have the same size".into());
+                return Err("Each and every row in the matrix 'a' should \
+                            have the same size"
+                    .into());
             }
         }
         if a.len() != b.len() {
             return Err(format!(
-                "Matrix 'a' rows count does not match with vector 'b' size ({} != {})",
-                a.len(), b.len(),
+                "Matrix 'a' rows count does not match with vector 'b' size \
+                 ({} != {})",
+                a.len(),
+                b.len(),
             ));
         }
 
         let x = vec![0.0; c.len()];
 
-        Ok(StandardFormLP {
-            c,
-            x,
-            a,
-            b,
-        })
+        Ok(StandardFormLP { c, x, a, b })
     }
 }
 
 impl fmt::Display for StandardFormLP {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         println!("Maximize: ");
-        let str = self.c.iter().enumerate()
+        let str = self
+            .c
+            .iter()
+            .enumerate()
             .map(|(j, c)| format!("{:.2} . x_{}", c, j))
             .collect::<Vec<String>>()
             .join(" + ");
         println!("\t{}", str);
         println!("Subject to:");
         for (i, line) in self.a.iter().enumerate() {
-            let str = line.iter().enumerate()
+            let str = line
+                .iter()
+                .enumerate()
                 .map(|(j, a)| format!("{:.2} . x_{}", a, j))
                 .collect::<Vec<String>>()
                 .join(" + ");
             println!("\t{} <= {:.2}", str, self.b[i]);
         }
-        let str = self.x.iter().enumerate()
+        let str = self
+            .x
+            .iter()
+            .enumerate()
             .map(|(j, _)| format!("x_{} >= 0.0", j))
             .collect::<Vec<String>>()
             .join(", ");
