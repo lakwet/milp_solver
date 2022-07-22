@@ -5,12 +5,12 @@ use std::fmt;
 /// Maximize Sum(c_j . x_j) for j = 1 to n
 ///
 /// Subject to:
-///
+/// ```ignore
 ///     Sum(a_ij . x_j) <= b_i for i = 1 to m, j = 1 to n
 ///     x_ij >= 0.0
-///
+/// ```
 /// Example:
-///
+/// ```ignore
 ///     max c_1 . x_1 + c_2 . x_2
 ///     with
 ///     a_11 . x_1 + a_12 . x_2 <= b_1
@@ -18,7 +18,7 @@ use std::fmt;
 ///     a_31 . x_1 + a_32 . x_2 <= b_3
 ///     x_1, x_2 >= 0.0
 ///     for i = 1 to 3, j = 1 to 2
-///
+/// ```
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct StandardFormLP {
     c: Vec<f32>,
@@ -44,7 +44,7 @@ impl StandardFormLP {
         }
         if c.len() != a[0].len() {
             return Err(format!(
-                "Matrix 'a' columns count does not match with vector 'c' size \
+                "Matrix 'a' rows count does not match with vector 'c' size \
                  ({} != {})",
                 a[0].len(),
                 c.len(),
@@ -59,14 +59,14 @@ impl StandardFormLP {
         }
         if a.len() != b.len() {
             return Err(format!(
-                "Matrix 'a' rows count does not match with vector 'b' size \
+                "Matrix 'a' columns count does not match with vector 'b' size \
                  ({} != {})",
                 a.len(),
                 b.len(),
             ));
         }
 
-        let x = vec![0.0; c.len()];
+        let x = vec![0.0; c.len()]; // Solution vector initialization
 
         Ok(StandardFormLP { c, x, a, b })
     }

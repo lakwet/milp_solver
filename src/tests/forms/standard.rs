@@ -58,7 +58,7 @@ fn forms_standard_standardformlp_mismatch_matrix_a_vector_b() {
 
     assert_eq!(
         err,
-        "Matrix 'a' rows count does not match with vector 'b' size (2 != 3)"
+        "Matrix 'a' columns count does not match with vector 'b' size (2 != 3)"
             .to_string()
     );
 }
@@ -73,7 +73,7 @@ fn forms_standard_standardformlp_mismatch_matrix_a_vector_c() {
 
     assert_eq!(
         err,
-        "Matrix 'a' columns count does not match with vector 'c' size (3 != 4)"
+        "Matrix 'a' rows count does not match with vector 'c' size (3 != 4)"
             .to_string()
     );
 }
@@ -87,4 +87,14 @@ fn forms_standard_standardformlp_should_be_created() {
     let standard_form = StandardFormLP::new(c, a, b);
 
     assert!(standard_form.is_ok());
+}
+
+#[test]
+fn forms_standard_standardformlp_just_print() {
+    let c = vec![10.2, 13.3, 14.18];
+    let b = vec![6.2, 8.12];
+    let a = vec![vec![1.1, 2.289719871981, 3.3], vec![4.4, 5.5, 6.6188918901]];
+
+    let standard_form = StandardFormLP::new(c, a, b).unwrap();
+    println!("{}", standard_form);
 }

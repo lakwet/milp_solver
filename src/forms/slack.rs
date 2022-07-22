@@ -1,21 +1,21 @@
 use std::fmt;
 
 /// Linear Programming, Slack form.
-///
+/// ```ignore
 ///     s = b_i - Sum(a_ij . x_j) for j = 1 to n
 ///     s >= 0
-///
+/// ```
 /// We use x_n+i instead of s_i, so we have:
-///
+/// ```ignore
 ///     x_n+i = b_i - Sum(a_ij . x_j) for j = 1 to n
 ///     x_n+i >= 0
-///
+/// ```
 /// With
-///
+/// ```ignore
 ///     z = v + Sum(c_j . x_j) for j = 1 to n
-///
+/// ```
 /// Example:
-///
+/// ```ignore
 ///     max z = c_1 . x_1 + c_2 . x_2
 ///     with
 ///     x_3 = b_1 - a_11 . x_1 - a_12 . x_2
@@ -23,14 +23,14 @@ use std::fmt;
 ///     x_5 = b_3 - a_31 . x_1 - a_32 . x_2
 ///     x_1, x_2, x_3, x_4, x_5 >= 0.0
 ///     for i = 1 to 3, j = 1 to 2
-///
+/// ```
 /// Notation: (N, B, A, b, c, v)
-///
+/// ```ignore
 ///     N is the set of indices of x in the left part of the equality
 ///     B is the set of indices of x in the right part of the equality
-///
+/// ```
 /// Example:
-///
+/// ```ignore
 ///     z = 28 - x_3 / 6 - x_5 / 6 - 2 . x_6 / 3
 ///     x_1 = 8 + x_3 / 6 + x_5 / 6 - x_6 / 3
 ///     x_2 = 4 - 8 . x_3 / 3 - 2 . x_5 / 3 + x_6 / 3
@@ -45,8 +45,7 @@ use std::fmt;
 ///               18 )
 ///         c = ( -1/6, -1/6 + 1/3)
 ///         v = 28
-///
-///
+/// ```
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct SlackFormLP {
     N: Vec<usize>,
@@ -66,6 +65,9 @@ impl SlackFormLP {
         v: f32,
     ) -> Result<SlackFormLP, String> {
         // The first instance must comply to these following constraints:
+        if A.is_empty() {
+            return Err("Matrix 'A' should not be empty".into());
+        }
         if b.is_empty() {
             return Err("Vector 'b' should not be empty".into());
         }
@@ -74,7 +76,7 @@ impl SlackFormLP {
         }
         if c.len() != A[0].len() {
             return Err(format!(
-                "Matrix 'A' columns count does not match with vector 'c' size \
+                "Matrix 'A' rows count does not match with vector 'c' size \
                  ({} != {})",
                 A[0].len(),
                 c.len(),
@@ -89,7 +91,7 @@ impl SlackFormLP {
         }
         if A.len() != b.len() {
             return Err(format!(
-                "Matrix 'a' rows count does not match with vector 'b' size \
+                "Matrix 'A' columns count does not match with vector 'b' size \
                  ({} != {})",
                 A.len(),
                 b.len(),
@@ -100,7 +102,7 @@ impl SlackFormLP {
             (c.len()..c.len() + b.len()).into_iter().collect::<Vec<usize>>();
         let B = (0..c.len()).into_iter().collect::<Vec<usize>>();
 
-        let x = vec![0.0; c.len()];
+        let x = vec![0.0; c.len() + b.len()]; // Solution vector initialization
 
         Ok(SlackFormLP { N, B, A, b, c, v, x })
     }
@@ -118,14 +120,15 @@ impl fmt::Display for SlackFormLP {
             .join(" + ");
         println!("\t{}", str);
         println!("Subject to:");
-        for (i, line) in self.a.iter().enumerate() {
+
+        for (i, line) in self.A.iter().enumerate() {
             let str = line
                 .iter()
                 .enumerate()
-                .map(|(j, a)| format!("{:.2} . x_{}", a, j))
+                .map(|(j, a)| format!("- {:.2} . x_{}", a, j))
                 .collect::<Vec<String>>()
                 .join(" + ");
-            println!("\t{} <= {:.2}", str, self.b[i]);
+            println!("\tx_{} = {:.2} {}", self.c.len() + i + 1, self.b[i], str);
         }
         let str = self
             .x
