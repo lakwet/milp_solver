@@ -1,5 +1,8 @@
 use std::fmt;
 
+use super::super::shared::utils::is_sorted;
+use super::slack::SlackFormLP;
+
 /// Linear Programming, Standard form.
 ///
 /// Maximize Sum(c_j . x_j) for j = 1 to n
@@ -25,6 +28,7 @@ pub struct StandardFormLP {
     x: Vec<f32>,
     a: Vec<Vec<f32>>,
     b: Vec<f32>,
+    non_negative_indices: Option<Vec<usize>>,
 }
 
 impl StandardFormLP {
@@ -32,6 +36,7 @@ impl StandardFormLP {
         c: Vec<f32>,
         a: Vec<Vec<f32>>,
         b: Vec<f32>,
+        non_negative_indices: Option<Vec<usize>>,
     ) -> Result<StandardFormLP, String> {
         if a.is_empty() {
             return Err("Matrix 'a' should not be empty".into());
@@ -65,10 +70,21 @@ impl StandardFormLP {
                 b.len(),
             ));
         }
+        if let Some(nni) = &non_negative_indices {
+            if !is_sorted(nni) {
+                return Err("Non negative indices vector must be sorted in \
+                            ascending order."
+                    .into());
+            }
+        }
 
         let x = vec![0.0; c.len()]; // Solution vector initialization
 
-        Ok(StandardFormLP { c, x, a, b })
+        Ok(StandardFormLP { c, x, a, b, non_negative_indices })
+    }
+
+    pub fn into_slack_form(&self) -> SlackFormLP {
+        unimplemented!();
     }
 }
 
