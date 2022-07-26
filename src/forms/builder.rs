@@ -1,7 +1,8 @@
-use super::super::shared::utils::is_sorted;
-use super::standard::StandardFormLP;
+use super::super::shared::utils::all_zeroes;
+use super::standard::{check_non_negative_indices, StandardFormLP};
 
 /// Builder for the standard form.
+#[derive(Debug, PartialEq)]
 pub struct StandardFormBuilder {
     c: Option<Vec<f32>>,
     a: Option<Vec<Vec<f32>>>,
@@ -21,7 +22,22 @@ impl StandardFormBuilder {
         }
     }
 
+    pub fn get_c(&self) -> &Option<Vec<f32>> { &self.c }
+
+    pub fn get_a(&self) -> &Option<Vec<Vec<f32>>> { &self.a }
+
+    pub fn get_b(&self) -> &Vec<f32> { &self.b }
+
+    pub fn get_non_negative_indices(&self) -> &Option<Vec<usize>> {
+        &self.non_negative_indices
+    }
+
+    pub fn get_dimension_size(&self) -> &Option<usize> { &self.dimension_size }
+
     fn check_dimension_size(&mut self, current: usize) -> Result<(), String> {
+        if current == 0 {
+            return Err("It is not possible to add an empty vector.".into());
+        }
         if let Some(nni) = &self.non_negative_indices {
             if nni[nni.len() - 1] >= current {
                 return Err("Non negative indices are out of bound of the \
@@ -51,12 +67,36 @@ impl StandardFormBuilder {
         Ok(())
     }
 
+    fn check_objective_not_zeroes(
+        &self,
+        objective: &Vec<f32>,
+    ) -> Result<(), String> {
+        if all_zeroes(objective) {
+            return Err("It is not possible to add objective with only zero \
+                        values."
+                .into());
+        }
+
+        Ok(())
+    }
+
+    fn check_constraint_not_zeroes(&self, a: &Vec<f32>) -> Result<(), String> {
+        if all_zeroes(a) {
+            return Err("It is not possible to add constraint with only zero \
+                        values."
+                .into());
+        }
+
+        Ok(())
+    }
+
     /// Add min objective function:
     ///
     /// min c_1 . x_1 + ... + c_n . x_n
     pub fn add_min_objective(mut self, c: Vec<f32>) -> Result<Self, String> {
         self.check_objective_added()?;
         self.check_dimension_size(c.len())?;
+        self.check_objective_not_zeroes(&c)?;
 
         let minus_c = c.into_iter().map(|v| -v).collect();
         self.c = Some(minus_c);
@@ -70,6 +110,7 @@ impl StandardFormBuilder {
     pub fn add_max_objective(mut self, c: Vec<f32>) -> Result<Self, String> {
         self.check_objective_added()?;
         self.check_dimension_size(c.len())?;
+        self.check_objective_not_zeroes(&c)?;
 
         self.c = Some(c);
 
@@ -78,33 +119,18 @@ impl StandardFormBuilder {
 
     /// Add non negative indices (sorted in ascending order)
     ///
-    /// [i such as (x_i in Real or x_i <= 0.0)]
+    /// [i such as x_i in Real]
     /// Indices start at 0
     /// For example: vec![0, 2, 5];
     pub fn add_non_negative_indices(
         mut self,
         nni: Vec<usize>,
     ) -> Result<Self, String> {
-        if nni.is_empty() {
-            return Err("It is not allowed to add an empty array of non \
-                        negative indices"
-                .into());
-        }
-        if !is_sorted(&nni) {
-            return Err("Non negative indices vector must be sorted in \
-                        ascending order."
-                .into());
-        }
-        if let Some(dim) = self.dimension_size {
-            if nni[nni.len() - 1] >= dim {
-                return Err("Non negative indices are out of bound of the \
-                            dimension size."
-                    .into());
-            }
-        }
+        let nni_opt = Some(nni);
+        check_non_negative_indices(&nni_opt, self.dimension_size)?;
 
         if self.non_negative_indices.is_none() {
-            self.non_negative_indices = Some(nni);
+            self.non_negative_indices = nni_opt;
             Ok(self)
         } else {
             Err("Non negative indices have already been set.".into())
@@ -120,6 +146,7 @@ impl StandardFormBuilder {
         b: f32,
     ) -> Result<Self, String> {
         self.check_dimension_size(a.len())?;
+        self.check_constraint_not_zeroes(&a)?;
 
         let minus_a = a.iter().map(|v| -v).collect();
 
@@ -143,6 +170,7 @@ impl StandardFormBuilder {
         b: f32,
     ) -> Result<Self, String> {
         self.check_dimension_size(a.len())?;
+        self.check_constraint_not_zeroes(&a)?;
 
         if let Some(mat) = &mut self.a {
             mat.push(a);
@@ -164,6 +192,7 @@ impl StandardFormBuilder {
         b: f32,
     ) -> Result<Self, String> {
         self.check_dimension_size(a.len())?;
+        self.check_constraint_not_zeroes(&a)?;
 
         let minus_a = a.into_iter().map(|v| -v).collect();
 
@@ -178,6 +207,7 @@ impl StandardFormBuilder {
         Ok(self)
     }
 
+    /// Build the current linear program into the standard form.
     pub fn build(self) -> Result<StandardFormLP, String> {
         let mut c = if let Some(c) = self.c {
             c
@@ -186,11 +216,6 @@ impl StandardFormBuilder {
                         objective function."
                 .into());
         };
-
-        let b = self.b;
-        if b.is_empty() {
-            return Err("The impossible happened, vector 'b' is empty.".into());
-        }
 
         let mut a = if let Some(a) = self.a {
             a
@@ -207,11 +232,6 @@ impl StandardFormBuilder {
                 "The impossible happened, row is matrix 'a' is empty.".into()
             );
         }
-        if a.len() != b.len() {
-            return Err("The impossible happened, there is a mismatch \
-                        between the matrix 'a' and the vector 'b'."
-                .into());
-        }
 
         for row in a.iter() {
             if row.len() != c.len() {
@@ -221,12 +241,23 @@ impl StandardFormBuilder {
             }
         }
 
-        if let Some(nni_vec) = &self.non_negative_indices {
-            for (nni, i) in nni_vec.iter().enumerate() {
-                c.insert(nni + i, c[nni + i]);
+        let b = self.b;
+        if b.is_empty() {
+            return Err("The impossible happened, vector 'b' is empty.".into());
+        }
+
+        if a.len() != b.len() {
+            return Err("The impossible happened, there is a mismatch \
+                        between the matrix 'a' and the vector 'b'."
+                .into());
+        }
+
+        if let Some(nni) = &self.non_negative_indices {
+            for i in nni.iter() {
+                c.push(c[*i]);
 
                 for row in a.iter_mut() {
-                    row.insert(nni + i, row[nni + i]);
+                    row.push(row[*i]);
                 }
             }
         }

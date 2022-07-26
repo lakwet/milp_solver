@@ -1,6 +1,6 @@
 use std::fmt;
 
-use super::super::shared::utils::is_sorted;
+use super::super::shared::utils::is_uniq_sorted;
 use super::slack::SlackFormLP;
 
 /// Linear Programming, Standard form.
@@ -22,6 +22,13 @@ use super::slack::SlackFormLP;
 ///     x_1, x_2 >= 0.0
 ///     for i = 1 to 3, j = 1 to 2
 /// ```
+///
+/// non_negative_indices stands for "Without non negative indices":
+/// [i such as x_i in Real]
+/// Indices start at 0
+/// For example: vec![0, 2, 5];
+/// Caution: x_i = x_i' - x_i'' transformation is already done!
+/// non_negative_indices are used to retrieve the solution
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct StandardFormLP {
     c: Vec<f32>,
@@ -70,13 +77,22 @@ impl StandardFormLP {
                 b.len(),
             ));
         }
-        if let Some(nni) = &non_negative_indices {
-            if !is_sorted(nni) {
-                return Err("Non negative indices vector must be sorted in \
-                            ascending order."
+
+        let non_negative_indices = if let Some(nni) = non_negative_indices {
+            let nni_len = nni.len();
+            if 2 * nni_len > c.len() {
+                return Err("Cannot be more non negative indices than the \
+                            dimension size."
                     .into());
             }
-        }
+
+            let nni_opt = Some(nni);
+            check_non_negative_indices(&nni_opt, Some(c.len() - nni_len))?;
+
+            nni_opt
+        } else {
+            None
+        };
 
         let x = vec![0.0; c.len()]; // Solution vector initialization
 
@@ -120,4 +136,31 @@ impl fmt::Display for StandardFormLP {
 
         write!(f, "\n")
     }
+}
+
+pub fn check_non_negative_indices(
+    non_negative_indices: &Option<Vec<usize>>,
+    max_dim: Option<usize>,
+) -> Result<(), String> {
+    if let Some(nni) = &non_negative_indices {
+        if nni.is_empty() {
+            return Err("It is not allowed to add an empty array of non \
+                        negative indices."
+                .into());
+        }
+        if !is_uniq_sorted(nni) {
+            return Err("Non negative indices vector must be unique and \
+                        sorted in ascending order."
+                .into());
+        }
+        if let Some(dim) = max_dim {
+            if nni[nni.len() - 1] >= dim {
+                return Err("Non negative indices are out of bound of the \
+                            dimension size."
+                    .into());
+            }
+        }
+    }
+
+    Ok(())
 }

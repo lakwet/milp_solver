@@ -96,6 +96,7 @@ fn forms_slack_slackformlp_should_be_created() {
     assert!(slack_form.is_ok());
 }
 
+#[ignore]
 #[test]
 fn forms_slack_slackformlp_just_print() {
     let A = vec![vec![12.39, 10.1], vec![1.1, 0.9]];

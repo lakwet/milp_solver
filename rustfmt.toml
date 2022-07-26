@@ -9,6 +9,5 @@ reorder_modules = true
 overflow_delimited_expr = true
 normalize_doc_attributes = false
 match_block_trailing_comma = true
-inline_attribute_width = 80
 format_strings = true
 fn_single_line = true
