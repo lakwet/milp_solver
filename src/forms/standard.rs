@@ -94,13 +94,23 @@ impl StandardFormLP {
             None
         };
 
-        let x = vec![0.0; c.len()]; // Solution vector initialization
+        let x = Vec::new();
 
         Ok(StandardFormLP { c, x, a, b, non_negative_indices })
     }
 
-    pub fn into_slack_form(&self) -> SlackFormLP {
-        unimplemented!();
+    pub fn get_x(self) -> Vec<f32> { self.x }
+
+    pub fn get_x_clone(&self) -> Vec<f32> { self.x.clone() }
+
+    pub fn into_slack_form(self) -> Result<SlackFormLP, String> {
+        let a: Vec<Vec<f32>> = self
+            .a
+            .into_iter()
+            .map(|row| row.into_iter().map(|v| -v).collect())
+            .collect();
+
+        SlackFormLP::new(a, self.b, self.c)
     }
 }
 

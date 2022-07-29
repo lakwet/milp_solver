@@ -268,13 +268,10 @@ fn forms_standard_standardformlp_should_be_created() {
 fn forms_standard_standardformlp_with_non_negative_indices_should_be_created() {
     let c = vec![10.2, 13.3, 14.18, 1., 2.];
     let b = vec![6.2, 8.12];
-    let a = vec![vec![1.1, 2.289719871981, 3.3, 1., 2.], vec![
-        4.4,
-        5.5,
-        6.6188918901,
-        1.,
-        2.,
-    ]];
+    let a = vec![
+        vec![1.1, 2.289719871981, 3.3, 1., 2.],
+        vec![4.4, 5.5, 6.6188918901, 1., 2.],
+    ];
     let nni = vec![0, 2];
 
     let standard_form = StandardFormLP::new(c, a, b, Some(nni));
