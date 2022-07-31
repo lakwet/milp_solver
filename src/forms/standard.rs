@@ -116,33 +116,13 @@ impl StandardFormLP {
 
 impl fmt::Display for StandardFormLP {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        println!("Maximize: ");
-        let str = self
-            .c
-            .iter()
-            .enumerate()
-            .map(|(j, c)| format!("{:.2} . x_{}", c, j))
-            .collect::<Vec<String>>()
-            .join(" + ");
-        println!("\t{}", str);
-        println!("Subject to:");
-        for (i, line) in self.a.iter().enumerate() {
-            let str = line
-                .iter()
-                .enumerate()
-                .map(|(j, a)| format!("{:.2} . x_{}", a, j))
-                .collect::<Vec<String>>()
-                .join(" + ");
-            println!("\t{} <= {:.2}", str, self.b[i]);
+        println!("LP - Standard form:");
+        println!("c: {:?}", self.c);
+        println!("a:");
+        for row in self.a.iter() {
+            println!("\t{:?}", row);
         }
-        let str = self
-            .x
-            .iter()
-            .enumerate()
-            .map(|(j, _)| format!("x_{} >= 0.0", j))
-            .collect::<Vec<String>>()
-            .join(", ");
-        println!("With: {}", str);
+        println!("b: {:?}", self.b);
 
         write!(f, "\n")
     }

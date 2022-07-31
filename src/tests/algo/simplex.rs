@@ -1,6 +1,6 @@
+use super::super::super::algo::simplex::simplex_lp_chvatal;
 use super::super::super::forms::slack::SimplexResult;
 use super::super::super::forms::standard::StandardFormLP;
-use super::super::super::algo::simplex::simplex_lp_chvatal;
 
 #[test]
 fn algo_simplex_simplex_lp_chvatal_should_succeed_case_1() {
@@ -44,7 +44,6 @@ fn algo_simplex_simplex_lp_chvatal_unbounded_case_1() {
     assert_eq!(simplex_result, SimplexResult::Unbounded);
 }
 
-#[ignore] // Because not implemented yet!
 #[test]
 fn algo_simplex_simplex_lp_chvatal_unfeasible_case_1() {
     let c = vec![3., -2.];
@@ -57,4 +56,18 @@ fn algo_simplex_simplex_lp_chvatal_unfeasible_case_1() {
     let simplex_result = simplex_lp_chvatal(&mut slack_form).unwrap();
 
     assert_eq!(simplex_result, SimplexResult::Unfeasible);
+}
+
+#[test]
+fn algo_simplex_simplex_lp_chvatal_non_basic_feasible_case_1() {
+    let c = vec![2., -1.];
+    let a = vec![vec![2., -1.], vec![1., -5.]];
+    let b = vec![2., -4.];
+
+    let standard_form = StandardFormLP::new(c, a, b, None).unwrap();
+    let mut slack_form = standard_form.into_slack_form().unwrap();
+
+    let simplex_result = simplex_lp_chvatal(&mut slack_form).unwrap();
+
+    assert_eq!(simplex_result, SimplexResult::Optimal(vec![6., 2.]));
 }

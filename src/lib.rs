@@ -4,7 +4,6 @@
 /// 2. is infeasible or
 /// 3. is unbounded
 /// (Introduction to algorithm, 2009, Cormen, Leiserson, et al)
-
 pub mod algo;
 #[allow(non_snake_case)]
 mod forms;

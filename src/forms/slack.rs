@@ -1,6 +1,32 @@
 use std::cmp::PartialOrd;
 use std::fmt;
 
+#[derive(Debug, PartialEq)]
+pub enum InitializationResult {
+    Done,
+    Unfeasible,
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Leaving {
+    Unbounded,
+    Info(f32, usize, usize), // delta, row index, basic index
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SimplexRound {
+    Finished,
+    Unbounded,
+    Switch(usize, usize), // Column, Row
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SimplexResult {
+    Unbounded,
+    Unfeasible,
+    Optimal(Vec<f32>),
+}
+
 /// Linear Programming, Slack form.
 /// ```ignore
 ///     s = b_i - Sum(a_ij . x_j) for j = 1 to n
@@ -106,14 +132,149 @@ impl SlackFormLP {
         Ok(SlackFormLP { N, B, A, b, c, v, n })
     }
 
-    pub fn get_dim(&self) -> usize {
-        self.n
+    pub fn get_dim(&self) -> usize { self.n }
+
+    pub fn initialize_simplex(
+        &mut self,
+    ) -> Result<InitializationResult, String> {
+        // Find the smallest b_j and its index
+        let mut smallest_b = self.b[0];
+        let mut smallest_row = 0;
+        for (j, b) in self.b.iter().enumerate().skip(1) {
+            if *b < smallest_b {
+                smallest_b = *b;
+                smallest_row = j;
+            }
+        }
+
+        // If all b_j >= 0. there is a basic feasible solution, nothing to do
+        // then
+        if smallest_b >= 0. {
+            return Ok(InitializationResult::Done);
+        }
+
+        // Otherwise, we have to find a non basic feasible solution
+        // Thus, we add a new variable, increasing dimension by 1
+
+        // Let's save the current objective
+        let saved_c = self.c.clone();
+
+        // And update c accordingly with the algorithm to find a non basic
+        // solution
+        self.c = vec![0.; self.n];
+        self.c.push(-1.); // Add sup x variable
+
+        // Update Basic and Non Basic indices
+        self.N.push(self.n); // Add sup x variable
+        for elem in self.B.iter_mut() {
+            *elem += 1;
+        }
+
+        // Increase dimension by 1
+        self.n += 1;
+
+        // Update A
+        for row in self.A.iter_mut() {
+            row.push(1.); // Add sup x variable
+        }
+
+        // First pivot to make the auxilliary lp problem feasible
+        self.pivot(self.n - 1, smallest_row);
+
+        let result = match self.find_optimal()? {
+            SimplexResult::Optimal(solution) if solution[self.n - 1] == 0. => {
+                InitializationResult::Done
+            },
+            _ => InitializationResult::Unfeasible,
+        };
+
+        if result == InitializationResult::Unfeasible {
+            return Ok(InitializationResult::Unfeasible);
+        }
+
+        let sup_x_index_row =
+            self.B.iter().enumerate().find(|(_, elem)| **elem == self.n - 1);
+
+        if let Some((row_index, _)) = sup_x_index_row {
+            // Perform one more pivot in order to put the sup x in non basic
+            // where a_row_index_i != 0.0
+            let col_degenerate_opt =
+                self.A[row_index].iter().enumerate().find(|(_, a)| **a != 0.);
+            if let Some((i, _)) = col_degenerate_opt {
+                self.pivot(i, row_index);
+            } else {
+                return Err("All values at degenerated row equal zero, this \
+                            should not happen."
+                    .into());
+            }
+        }
+
+        // Otherwise, restore initial lp problem with updates for the non basic
+        // feasible solution
+
+        let sup_x_index_col =
+            self.N.iter().enumerate().find(|(_, elem)| **elem == self.n - 1);
+
+        let x_col = if let Some((col, _)) = sup_x_index_col {
+            col
+        } else {
+            return Err("Sup x variable has not been found in non basic \
+                        variable, this should not happen"
+                .into());
+        };
+
+        // Remove sup var in N
+        self.N.swap_remove(x_col);
+
+        // Remove colum at index 'col'
+        for row in self.A.iter_mut() {
+            row.swap_remove(x_col);
+        }
+
+        // Remove element in objective at index 'col'
+        self.c.swap_remove(x_col);
+
+        // Update dimension
+        self.n -= 1;
+
+        // Update B and N
+        for elem in self.N.iter_mut() {
+            if *elem >= self.n {
+                *elem -= 1;
+            }
+        }
+        for elem in self.B.iter_mut() {
+            if *elem >= self.n {
+                *elem -= 1;
+            }
+        }
+
+        // Recompute the objective function
+        self.recompute_objective_for_initialization(saved_c);
+
+        Ok(InitializationResult::Done)
     }
 
-    pub fn initialize_lp(&mut self) {
-        // For now, let's consider that each LP problem is a "basic" problem
-        // with an easy first solution.
-        unimplemented!();
+    fn recompute_objective_for_initialization(&mut self, init_c: Vec<f32>) {
+        let mut objective = vec![0.; self.n];
+
+        for (row, basic) in self.B.iter().enumerate() {
+            if *basic < self.n {
+                let coef = init_c[*basic];
+                self.v += self.b[row] * coef;
+                for (j, elem) in self.A[row].iter().enumerate() {
+                    objective[j] += *elem * coef;
+                }
+            }
+        }
+
+        for (col, non_basic) in self.N.iter().enumerate() {
+            if *non_basic < self.n {
+                objective[col] += init_c[*non_basic];
+            }
+        }
+
+        self.c = objective;
     }
 
     fn find_leaving(&self, col: usize) -> Result<Leaving, String> {
@@ -236,7 +397,38 @@ impl SlackFormLP {
         self.A[row] = inv_row;
     }
 
+    pub fn find_optimal(&mut self) -> Result<SimplexResult, String> {
+        let mut round_count = 0;
+
+        loop {
+            round_count += 1;
+
+            match self.find_entering_and_leaving() {
+                Ok(SimplexRound::Unbounded) => {
+                    return Ok(SimplexResult::Unbounded);
+                },
+                Ok(SimplexRound::Finished) => {
+                    break;
+                },
+                Ok(SimplexRound::Switch(col, row)) => {
+                    self.pivot(col, row);
+                },
+                Err(msg) => {
+                    return Err(msg);
+                },
+            }
+        }
+
+        println!("Round count: {}", round_count);
+
+        println!("end: {}", self);
+
+        Ok(self.compute_solution_vector())
+    }
+
     pub fn compute_solution_vector(&self) -> SimplexResult {
+        // Each non basic variables are set to 0
+        // Each basic variables 'j' are set with the value of the respective b_j
         let mut x = vec![0.; self.n];
         for (j, basic) in self.B.iter().enumerate() {
             if *basic < self.n {
@@ -250,49 +442,21 @@ impl SlackFormLP {
 
 impl fmt::Display for SlackFormLP {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        println!("Maximize: ");
-        let str = self
-            .c
-            .iter()
-            .enumerate()
-            .map(|(j, c)| format!("{:.2} . x_{}", c, j))
-            .collect::<Vec<String>>()
-            .join(" + ");
-        println!("\t{}", str);
-        println!("Subject to:");
-
-        for (i, line) in self.A.iter().enumerate() {
-            let str = line
-                .iter()
-                .enumerate()
-                .map(|(j, a)| format!("- {:.2} . x_{}", a, j))
-                .collect::<Vec<String>>()
-                .join(" + ");
-            println!("\tx_{} = {:.2} {}", self.c.len() + i + 1, self.b[i], str);
+        println!("LP - Slack form:");
+        println!("N: {:?}", self.N);
+        println!("B: {:?}", self.B);
+        println!("c: {:?}", self.c);
+        println!("A:");
+        for row in self.A.iter() {
+            println!("\t{:?}", row);
         }
+        println!("b: {:?}", self.b);
+        println!("v: {:?}", self.v);
+        println!("n: {}", self.n);
+        println!("Solution vector: {:?}", self.compute_solution_vector());
 
         write!(f, "\n")
     }
-}
-
-#[derive(Debug, PartialEq)]
-pub enum Leaving {
-    Unbounded,
-    Info(f32, usize, usize), // delta, row index, basic index
-}
-
-#[derive(Debug, PartialEq)]
-pub enum SimplexRound {
-    Finished,
-    Unbounded,
-    Switch(usize, usize), // Column, Row
-}
-
-#[derive(Debug, PartialEq)]
-pub enum SimplexResult {
-    Unbounded,
-    Unfeasible,
-    Optimal(Vec<f32>),
 }
 
 #[test]
@@ -413,7 +577,7 @@ fn non_public_forms_slack_slackformlp_pivot_case_2() {
         A: vec![
             vec![-0.0625, 0.1875, 0.625],
             vec![0.125, -0.375, -0.25],
-            vec![-0.3125, -0.0625, 0.125]
+            vec![-0.3125, -0.0625, 0.125],
         ],
         b: vec![17.25, 1.5, 8.25],
         c: vec![-0.6875, 0.0625, -0.125],
@@ -432,7 +596,7 @@ fn non_public_forms_slack_slackformlp_pivot_case_3() {
         A: vec![
             vec![-0.0625, 0.1875, 0.625],
             vec![0.125, -0.375, -0.25],
-            vec![-0.3125, -0.0625, 0.125]
+            vec![-0.3125, -0.0625, 0.125],
         ],
         b: vec![17.25, 1.5, 8.25],
         c: vec![-0.6875, 0.0625, -0.125],
@@ -454,6 +618,34 @@ fn non_public_forms_slack_slackformlp_pivot_case_3() {
         c: vec![-0.6666667, -0.16666667, -0.16666667],
         v: 28.0,
         n: 3,
+    };
+
+    assert_eq!(lp_slack, expected);
+}
+
+#[test]
+fn non_public_forms_slack_slackformlp_initialize_simplex_case_1() {
+    let mut lp_slack = SlackFormLP {
+        N: vec![0, 1],
+        B: vec![2, 3],
+        A: vec![vec![-2., 1.], vec![-1., 5.]],
+        b: vec![2., -4.],
+        c: vec![2., -1.],
+        v: 0.,
+        n: 2,
+    };
+
+    let result = lp_slack.initialize_simplex().unwrap();
+    assert_eq!(result, InitializationResult::Done);
+
+    let expected = SlackFormLP {
+        N: vec![0, 3],
+        B: vec![2, 1],
+        A: vec![vec![-1.8, 0.19999999], vec![0.2, 0.2]],
+        b: vec![2.8, 0.8],
+        c: vec![1.8, -0.2],
+        v: -0.8,
+        n: 2,
     };
 
     assert_eq!(lp_slack, expected);
