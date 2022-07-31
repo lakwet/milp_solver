@@ -12,6 +12,6 @@ pub fn is_uniq_sorted<T: PartialOrd>(v: &Vec<T>) -> bool {
     true
 }
 
-pub fn all_zeroes(v: &Vec<f32>) -> bool {
+pub fn all_zeroes(v: &Vec<f64>) -> bool {
     v.iter().fold(true, |acc, v| acc && *v == 0.0)
 }

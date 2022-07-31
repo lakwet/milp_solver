@@ -31,18 +31,18 @@ use super::slack::SlackFormLP;
 /// non_negative_indices are used to retrieve the solution
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub struct StandardFormLP {
-    c: Vec<f32>,
-    x: Vec<f32>,
-    a: Vec<Vec<f32>>,
-    b: Vec<f32>,
+    c: Vec<f64>,
+    x: Vec<f64>,
+    a: Vec<Vec<f64>>,
+    b: Vec<f64>,
     non_negative_indices: Option<Vec<usize>>,
 }
 
 impl StandardFormLP {
     pub fn new(
-        c: Vec<f32>,
-        a: Vec<Vec<f32>>,
-        b: Vec<f32>,
+        c: Vec<f64>,
+        a: Vec<Vec<f64>>,
+        b: Vec<f64>,
         non_negative_indices: Option<Vec<usize>>,
     ) -> Result<StandardFormLP, String> {
         if a.is_empty() {
@@ -99,12 +99,12 @@ impl StandardFormLP {
         Ok(StandardFormLP { c, x, a, b, non_negative_indices })
     }
 
-    pub fn get_x(self) -> Vec<f32> { self.x }
+    pub fn get_x(self) -> Vec<f64> { self.x }
 
-    pub fn get_x_clone(&self) -> Vec<f32> { self.x.clone() }
+    pub fn get_x_clone(&self) -> Vec<f64> { self.x.clone() }
 
     pub fn into_slack_form(self) -> Result<SlackFormLP, String> {
-        let a: Vec<Vec<f32>> = self
+        let a: Vec<Vec<f64>> = self
             .a
             .into_iter()
             .map(|row| row.into_iter().map(|v| -v).collect())

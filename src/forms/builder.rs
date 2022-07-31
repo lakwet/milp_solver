@@ -4,9 +4,9 @@ use super::standard::{check_non_negative_indices, StandardFormLP};
 /// Builder for the standard form.
 #[derive(Debug, PartialEq)]
 pub struct StandardFormBuilder {
-    c: Option<Vec<f32>>,
-    a: Option<Vec<Vec<f32>>>,
-    b: Vec<f32>,
+    c: Option<Vec<f64>>,
+    a: Option<Vec<Vec<f64>>>,
+    b: Vec<f64>,
     non_negative_indices: Option<Vec<usize>>,
     dimension_size: Option<usize>,
 }
@@ -22,11 +22,11 @@ impl StandardFormBuilder {
         }
     }
 
-    pub fn get_c(&self) -> &Option<Vec<f32>> { &self.c }
+    pub fn get_c(&self) -> &Option<Vec<f64>> { &self.c }
 
-    pub fn get_a(&self) -> &Option<Vec<Vec<f32>>> { &self.a }
+    pub fn get_a(&self) -> &Option<Vec<Vec<f64>>> { &self.a }
 
-    pub fn get_b(&self) -> &Vec<f32> { &self.b }
+    pub fn get_b(&self) -> &Vec<f64> { &self.b }
 
     pub fn get_non_negative_indices(&self) -> &Option<Vec<usize>> {
         &self.non_negative_indices
@@ -69,7 +69,7 @@ impl StandardFormBuilder {
 
     fn check_objective_not_zeroes(
         &self,
-        objective: &Vec<f32>,
+        objective: &Vec<f64>,
     ) -> Result<(), String> {
         if all_zeroes(objective) {
             return Err("It is not possible to add objective with only zero \
@@ -80,7 +80,7 @@ impl StandardFormBuilder {
         Ok(())
     }
 
-    fn check_constraint_not_zeroes(&self, a: &Vec<f32>) -> Result<(), String> {
+    fn check_constraint_not_zeroes(&self, a: &Vec<f64>) -> Result<(), String> {
         if all_zeroes(a) {
             return Err("It is not possible to add constraint with only zero \
                         values."
@@ -93,7 +93,7 @@ impl StandardFormBuilder {
     /// Add min objective function:
     ///
     /// min c_1 . x_1 + ... + c_n . x_n
-    pub fn add_min_objective(mut self, c: Vec<f32>) -> Result<Self, String> {
+    pub fn add_min_objective(mut self, c: Vec<f64>) -> Result<Self, String> {
         self.check_objective_added()?;
         self.check_dimension_size(c.len())?;
         self.check_objective_not_zeroes(&c)?;
@@ -107,7 +107,7 @@ impl StandardFormBuilder {
     /// Add max objective function
     ///
     /// max c_1 . x_1 + ... + c_n . x_n
-    pub fn add_max_objective(mut self, c: Vec<f32>) -> Result<Self, String> {
+    pub fn add_max_objective(mut self, c: Vec<f64>) -> Result<Self, String> {
         self.check_objective_added()?;
         self.check_dimension_size(c.len())?;
         self.check_objective_not_zeroes(&c)?;
@@ -142,8 +142,8 @@ impl StandardFormBuilder {
     /// a_1 . x_1 + ... + a_n . x_n = b
     pub fn add_equality_constraint(
         mut self,
-        a: Vec<f32>,
-        b: f32,
+        a: Vec<f64>,
+        b: f64,
     ) -> Result<Self, String> {
         self.check_dimension_size(a.len())?;
         self.check_constraint_not_zeroes(&a)?;
@@ -166,8 +166,8 @@ impl StandardFormBuilder {
     /// a_1 . x_1 + ... + a_n . x_n <= b
     pub fn add_less_than_or_equal_constraint(
         mut self,
-        a: Vec<f32>,
-        b: f32,
+        a: Vec<f64>,
+        b: f64,
     ) -> Result<Self, String> {
         self.check_dimension_size(a.len())?;
         self.check_constraint_not_zeroes(&a)?;
@@ -188,8 +188,8 @@ impl StandardFormBuilder {
     /// a_1 . x_1 + ... + a_n . x_n >= b
     pub fn add_greater_than_or_equal_constraint(
         mut self,
-        a: Vec<f32>,
-        b: f32,
+        a: Vec<f64>,
+        b: f64,
     ) -> Result<Self, String> {
         self.check_dimension_size(a.len())?;
         self.check_constraint_not_zeroes(&a)?;

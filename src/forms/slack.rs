@@ -10,7 +10,7 @@ pub enum InitializationResult {
 #[derive(Debug, PartialEq)]
 pub enum Leaving {
     Unbounded,
-    Info(f32, usize, usize), // delta, row index, basic index
+    Info(f64, usize, usize), // delta, row index, basic index
 }
 
 #[derive(Debug, PartialEq)]
@@ -24,7 +24,7 @@ pub enum SimplexRound {
 pub enum SimplexResult {
     Unbounded,
     Unfeasible,
-    Optimal(Vec<f32>),
+    Optimal(Vec<f64>),
 }
 
 /// Linear Programming, Slack form.
@@ -77,18 +77,18 @@ pub enum SimplexResult {
 pub struct SlackFormLP {
     N: Vec<usize>, // Non Basic variables
     B: Vec<usize>, // Basic variables
-    A: Vec<Vec<f32>>,
-    b: Vec<f32>,
-    c: Vec<f32>,
-    v: f32,
+    A: Vec<Vec<f64>>,
+    b: Vec<f64>,
+    c: Vec<f64>,
+    v: f64,
     n: usize, // dimension problem (number of cols)
 }
 
 impl SlackFormLP {
     pub fn new(
-        A: Vec<Vec<f32>>,
-        b: Vec<f32>,
-        c: Vec<f32>,
+        A: Vec<Vec<f64>>,
+        b: Vec<f64>,
+        c: Vec<f64>,
     ) -> Result<SlackFormLP, String> {
         // The first instance must comply to these following constraints:
         if A.is_empty() {
@@ -255,7 +255,7 @@ impl SlackFormLP {
         Ok(InitializationResult::Done)
     }
 
-    fn recompute_objective_for_initialization(&mut self, init_c: Vec<f32>) {
+    fn recompute_objective_for_initialization(&mut self, init_c: Vec<f64>) {
         let mut objective = vec![0.; self.n];
 
         for (row, basic) in self.B.iter().enumerate() {
@@ -354,7 +354,7 @@ impl SlackFormLP {
         // Create new row to replace row at index 'row'
         let minus_a_rc = -self.A[row][col]; // which is != 0.0
         self.b[row] = self.b[row] / minus_a_rc;
-        let inv_row: Vec<f32> =
+        let inv_row: Vec<f64> =
             self.A[row]
                 .iter()
                 .enumerate()
