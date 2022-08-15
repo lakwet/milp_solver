@@ -288,10 +288,9 @@ impl SlackFormLP {
                 if *b >= 0. && self.A[row][col] < 0. {
                     let delta = b / -self.A[row][col];
                     acc.push((delta, row));
-                    acc
-                } else {
-                    acc
                 }
+
+                acc
             });
 
         if deltas.is_empty() {
@@ -401,8 +400,6 @@ impl SlackFormLP {
         let mut round_count = 0;
 
         loop {
-            round_count += 1;
-
             match self.find_entering_and_leaving() {
                 Ok(SimplexRound::Unbounded) => {
                     return Ok(SimplexResult::Unbounded);
@@ -412,6 +409,7 @@ impl SlackFormLP {
                 },
                 Ok(SimplexRound::Switch(col, row)) => {
                     self.pivot(col, row);
+                    round_count += 1;
                 },
                 Err(msg) => {
                     return Err(msg);
@@ -420,8 +418,6 @@ impl SlackFormLP {
         }
 
         println!("Round count: {}", round_count);
-
-        println!("end: {}", self);
 
         Ok(self.compute_solution_vector())
     }
@@ -611,11 +607,15 @@ fn non_public_forms_slack_slackformlp_pivot_case_3() {
         B: vec![3, 1, 0],
         A: vec![
             vec![0.0, -0.5, 0.5],
-            vec![0.33333334, -2.6666667, -0.6666667],
-            vec![-0.33333334, 0.16666667, 0.16666667],
+            vec![0.3333333333333333, -2.6666666666666665, -0.6666666666666666],
+            vec![-0.3333333333333333, 0.16666666666666666, 0.16666666666666666],
         ],
         b: vec![18.0, 4.0, 8.0],
-        c: vec![-0.6666667, -0.16666667, -0.16666667],
+        c: vec![
+            -0.6666666666666666,
+            -0.16666666666666666,
+            -0.16666666666666666,
+        ],
         v: 28.0,
         n: 3,
     };
@@ -641,7 +641,7 @@ fn non_public_forms_slack_slackformlp_initialize_simplex_case_1() {
     let expected = SlackFormLP {
         N: vec![0, 3],
         B: vec![2, 1],
-        A: vec![vec![-1.8, 0.19999999], vec![0.2, 0.2]],
+        A: vec![vec![-1.8, 0.19999999999999996], vec![0.2, 0.2]],
         b: vec![2.8, 0.8],
         c: vec![1.8, -0.2],
         v: -0.8,

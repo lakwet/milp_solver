@@ -7,7 +7,6 @@ pub fn simplex_lp_chvatal(
 ) -> Result<SimplexResult, String> {
     let init_result = slack_lp.initialize_simplex()?;
 
-    println!("{}", slack_lp);
     if init_result == InitializationResult::Unfeasible {
         return Ok(SimplexResult::Unfeasible);
     }

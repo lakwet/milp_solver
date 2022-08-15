@@ -1,8 +1,14 @@
 [package]
 name = "milp_solver"
 version = "0.1.0"
+authors = ["Axelle Piot <axelle.piot@lyart.fr>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+description = "Mixed Integer Linear Programming"
+license = "Apache 2.0"
+readme = "README.md"
+documentation = "https://docs.rs/milp_solver/"
+repository = "https://github.com/lakwet/milp_solver"
+keywords = ["solver", "algorithms", "linear program", "research", "integer program", "mixed integer linear program"]
+categories = ["algorithms", "science"]
 
 [dependencies]
